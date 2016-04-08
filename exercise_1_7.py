@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#7. Write a Python program that reads both the YAML file and the JSON file created in exercise6 and pretty prints the data structure that is returned.
+
 import yaml
 import json
 from pprint import pprint as pp
