@@ -1,0 +1,15 @@
+---
+- name: Arista Ansible Testing
+  hosts: arista
+
+  tasks:
+  	- name: Testing command (not item potent)
+  	  eos_command: commands="write memory"
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+  	  register: cmd_out
+
+  	- debug: var=cmd_out

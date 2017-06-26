@@ -1,0 +1,370 @@
+---
+- hosts: localhost
+ vars:
+ 	hostname: pynet-rtr1
+ tasks:
+ 	- name: Generate configuration file
+ 	  template: src=/home/skas/ANSIBLE/class3/router1.j2
+ 	  			dest=/home/skas/ANSIBLE/CFGS/router1.txt
+
+#playbooks are broken down into actions called plays
+#above is 1 play, operating on localhost...taking 1 action (task)
+
+#a second task would be another element such as...
+
+- hosts: webservers
+ tasks:
+ 	- name: do something
+ 	 some_action
+
+#a play can have multiple actions...
+
+- hosts: localhost
+ vars:
+ 	hostname: pynet-rtr1
+ tasks:
+ 	- name: Generate configuration file
+ 	  template: src=/home/skas/ANSIBLE/class3/router1.j2
+ 	  			dest=/home/skas/ANSIBLE/CFGS/router1.txt
+ 	- name: Generate configuration file
+ 	  template: src=/home/skas/ANSIBLE/class3/router2.j2
+ 	  			dest=/home/skas/ANSIBLE/CFGS/router2.txt
+ 	- name: Generate configuration file
+ 	  template: src=/home/skas/ANSIBLE/class3/router3.j2
+ 	  			dest=/home/skas/ANSIBLE/CFGS/router3.txt
+--------------------------------
+--------------------------------
+#hosts can be a group of devices instead of single
+
+#ansible keeps an inventory file as well...
+#have to define it...check /etc/ansible/hosts (in lab it's in ansible-hosts)
+
+[local]
+localhost ansible_connection = local
+
+[devwww]
+dev_www1 ansible_ssh_host=10.10.10.11 ansible_ssh_user=web
+dev_www2 ansible_ssh_host=10.10.10.12 ansible_ssh_user=web
+dev_www3 ansible_ssh_host=10.10.10.13 ansible_ssh_user=web
+dev_www4 ansible_ssh_host=10.10.10.14 ansible_ssh_user=web
+dev_www5 ansible_ssh_host=10.10.10.15 ansible_ssh_user=web
+
+#brackets define a group
+
+[testnew]
+test1 ansible_ssh_host=10.164.10.13 ansible_ssh_user=gituser ansible_ssh_port=8022
+test2 ansible_ssh_host=10.164.10.14 ansible_ssh_user=gituser ansible_ssh_port=8022
+
+#first entry can be resolvable name (fqdn or IP)...then don't need to specify ssh_host
+#can specify port and user
+#what about passwords?
+
+# ansible_connection=local indicates no SSH required
+
+#execute ansible actions directly from CLI...such as
+ansible local -m ping
+#ansible calls it...local is specifying group local... -m is module (such as ping)
+#so pinging localhost
+#output returned in JSON format
+'''
+(applied_python)[jboyer@ip-172-30-0-39 ~]$ ansible local -m ping
+localhost | success >> {
+    "changed": false, 
+    "ping": "pong"
+}
+'''
+
+#on remote boxes, the | success / failure is important to note and lets us know how it goes...
+#certificates or SSH keys make ansible connectivity easier (no password required)
+-----
+-----
+video 3
+-----
+-----
+---
+#router.yml
+- hosts: localhost
+ vars:
+ 	hostname: pynet-rtr1
+ tasks:
+ 	- name: Generate configuration file
+ 	  template: src=/home/jboyer/ANSIBLE/router1.j2
+ 	  			dest=/home/jboyer/ANSIBLE/out/router1.txt
+
+-
+#template is a MODULE...we're specifying where it is from there
+#examples, set permissions
+#arista modules (assign ports to vlans, etc)
+#set security parameters on hosts
+#pip installation
+#yum/apt installation of packages
+---
+#router1.j2
+no service pad
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+!
+hostname {{hostname}}
+!
+boot-start-marker
+boot-end-marker
+!
+logging buffered 32000
+no logging consle
+!
+---
+#so in the VARs section, we just specify what'll be going where for the various variables we define in the playbook entry (via the {{VARIABLE}} part in the j2 file)
+
+#to EXECUTE a playbook you invoke ansible-playbook YML file name...such as:
+ansible-playbook router.yml
+#output looks like this:
+
+(applied_python)[jboyer@ip-172-30-0-39 ANSIBLE]$ vi router.yml
+(applied_python)[jboyer@ip-172-30-0-39 ANSIBLE]$ ansible-playbook router.yml 
+
+PLAY [localhost] ************************************************************** 
+
+GATHERING FACTS *************************************************************** 
+ok: [localhost]
+
+TASK: [Generate configuration file] ******************************************* 
+changed: [localhost]
+
+PLAY RECAP ******************************************************************** 
+localhost                  : ok=2    changed=1    unreachable=0    failed=0   
+
+##and then there's the output file too...
+
+# the --check flag will test it, but not run it (tells us in advance if there will be any changes)
+#remember, ansible attempts to be item potent
+
+#can use 'with' in ansible as a for loop....can use the item/for x (the x) as a variable...
+---
+#router.yml
+- hosts: localhost
+ tasks:
+ 	- name: Generate configuration file
+ 	  template: src=/home/jboyer/ANSIBLE/router1.j2
+ 	  			dest=/home/jboyer/ANSIBLE/out/{{item.hostname}}.txt
+ 	   with_items:
+ 	     - hostname: pynet-rtr1
+ 	     - hostname: pynet-rtr2
+ 	     - hostname: pynet-rtr3
+ 	     - hostname: pynet-rtr4
+ 	     - hostname: pynet-rtr5
+ 	     - hostname: pynet-rtr6
+---
+#so item.hostname specifies the value of the hostnames as each filename, for all hostnames listed...
+#be sure to update j2 (jinja2) file with {{item.hostname}} instead of {{hostname}}
+
+can add additional items to our dictionaries...such as IP address....
+
+----------
+---
+#router.yml
+- hosts: localhost
+  tasks:
+ 	- name: Generate configuration file
+ 	  template: src=/home/jboyer/ANSIBLE/router1.j2
+ 	  			dest=/home/jboyer/ANSIBLE/out/{{item.hostname}}.txt
+ 	  with_items:
+        - {hostname: pynet-rtr1, ip_addr: 1.1.1.1 }
+        - {hostname: pynet-rtr2, ip_addr: 1.1.1.2 }
+        - {hostname: pynet-rtr3, ip_addr: 1.1.1.3 }
+        - {hostname: pynet-rtr4, ip_addr: 1.1.1.4 }
+        - {hostname: pynet-rtr5, ip_addr: 1.1.1.5 }
+        - {hostname: pynet-rtr6, ip_addr: 1.1.1.6 }
+
+#need to update the jinja file with new items...
+
+#router1.j2
+no service pad
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+!
+hostname {{item.hostname}}
+!
+boot-start-marker
+boot-end-marker
+!
+logging buffered 32000
+no logging consle
+!
+interface management0
+ip address {{item.ip_addr}}/28
+no shut
+!
+
+##jinja somewhat similar to django...very standardized
+#when executing playbook, output will overwrite, not append
+
+#will talk about conditional soon...if interface type X, do Y...if interface type Z, do A
+
+-----
+video 4
+-----
+#can use ROLES in ansible...
+#include certain ansible files by default
+#our template src can be shortened via roles
+#can put variables elsewhere via roles
+#roles requires specific structure
+#examples of dir roles with dir router underneath...inside that dir: tasks, templates, vars directories
+#
+
+---
+#main.yml
+- name: Generate configuration file
+  template: src=router1.j2 dest=/home/jboyer/ANSIBLE/CFGS/{{item.hostname}}.txt
+  with_items:
+      - {hostname: pynet-rtr1, ip_addr: 1.1.1.1 }
+      - {hostname: pynet-rtr2, ip_addr: 1.1.1.2 }
+      - {hostname: pynet-rtr3, ip_addr: 1.1.1.3 }
+      - {hostname: pynet-rtr4, ip_addr: 1.1.1.4 }
+      - {hostname: pynet-rtr5, ip_addr: 1.1.1.5 }
+      - {hostname: pynet-rtr6, ip_addr: 1.1.1.6 }
+
+#note, no hosts line
+#note, no tasks line (still sort of exists, but just assumed tasks)
+#file for variable
+#separate tasks from hosts in playbook
+#such as site.yml
+---
+#site.yml for root to specify our roles
+- name: Generate configuration file
+  hosts: local
+
+  roles:
+   - router
+
+#the above just says it's only executing router roles
+
+#knows to look in /roles/router/tasks for a main.yml  for additional tasks to execute
+#when using roles, knows to check existing role directories for template directory and run jinja files from there (based on name specified as src)  so above looks in /roles/router/templates/ for router1.j2
+
+#can invoke via ansible-playbook site.yml
+
+#would be nice to move with_items/variables out of the playbook...
+#so we can do
+
+---
+#main.yml from tasks
+- name: Generate configuration file
+  template: src=router1.j2 dest=/home/jboyer/ANSIBLE/CFGS/{{item.hostname}}.txt
+  with_items: test_routers (in newer versions of ansible it's with_items: "{{test_routers}}"    )
+
+then within /roles/router/vars/  look for main.yml
+
+---
+#main.yml from vars
+test_routers:
+  - {hostname: pynet-rtr1, ip_addr: 1.1.1.1 }
+  - {hostname: pynet-rtr2, ip_addr: 1.1.1.2 }
+  - {hostname: pynet-rtr3, ip_addr: 1.1.1.3 }
+  - {hostname: pynet-rtr4, ip_addr: 1.1.1.4 }
+  - {hostname: pynet-rtr5, ip_addr: 1.1.1.5 }
+  - {hostname: pynet-rtr6, ip_addr: 1.1.1.6 }
+
+#router1.j2 from templates
+
+#router1.j2
+no service pad
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+!
+hostname {{item.hostname}}
+!
+boot-start-marker
+boot-end-marker
+!
+logging buffered 32000
+no logging consle
+!
+interface management0
+ip address {{item.ip_addr}}/28
+no shut
+!
+
+
+#should have:
+#/site.yml (specifies which hosts to execute playbook upon and which roles for that playbook)
+#/roles/NAME/tasks/main.yml (specifies what the role is doing)
+#/roles/NAME/templates/TEMPLATE_NAME.j2 (what template that role uses)
+#/roles/NAME/vars/main.yml (what variables to use for that template)
+
+#with jinja2 can use if/else...
+#so, let's say the template looked like this instead...
+
+#router1.j2
+no service pad
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+!
+hostname {{item.hostname}}
+!
+boot-start-marker
+boot-end-marker
+!
+logging buffered 32000
+no logging consle
+!
+{% if item.DHCP %}
+no ip dhcp conflict logging
+!
+ip dhcp pool POOL1
+	network {{item.dhcp_network}} 255.255.255.0
+	default-router {{item.ip_addr}}
+	dns-server 8.8.8.8 8.8.4.4
+{% endif %}
+!
+interface management0
+ip address {{item.ip_addr}}/28
+no shut
+!
+
+#the {% if %} {% endif %} conditional stuff allows us to look if that item.DHCP exists in our variables file for each entry, and if it does, include it...
+
+---
+#main.yml from vars
+test_routers:
+  - {hostname: pynet-rtr1, ip_addr: 1.1.1.1, DHCP: False, dhcp_network: none }
+  - {hostname: pynet-rtr2, ip_addr: 1.1.1.2, DHCP: False, dhcp_network: none }
+  - {hostname: pynet-rtr3, ip_addr: 1.1.1.3, DHCP: False, dhcp_network: none }
+  - {hostname: pynet-rtr4, ip_addr: 1.1.1.4, DHCP: True, dhcp_network: 123.4.4.0}
+  - {hostname: pynet-rtr5, ip_addr: 1.1.1.5, DHCP: True, dhcp_network: 123.5.5.0}
+  - {hostname: pynet-rtr6, ip_addr: 1.1.1.6, DHCP: True, dhcp_network: 123.6.6.0 }
+
+
+'''
+ANSIBLE...template template template...
+
+3. In the above access_switch.j2 template use a Jinja2 for loop to create all of the interfaces from FastEthernet 0/1 to FastEthernet 0/24.  Each of the interfaces should have the following configuration:
+
+>>>>
+interface FastEthernet 0/X                    # where X is the interface number
+ switchport access vlan {{item.access_vlan}}                
+ switchport mode access
+ spanning-tree portfast  
+>>>>
+
+For reference on the for loop syntax see the Jinja2 documentation or look at my solution on GitHub.
+
+{% for port_number in range(1,25) %} #remember, a python range ends 1 before the printed number but starts where listed, so 1,25 is 1-24
+interface FastEthernet0/{{ port_number }}
+ switchport access vlan {{item.access_vlan}}
+ switchport mode access
+ spanning-tree portfast
+!
+{% endfor %}
+'''

@@ -1,0 +1,3 @@
+#config_file.txt
+logging buffered 11000
+no logging cons

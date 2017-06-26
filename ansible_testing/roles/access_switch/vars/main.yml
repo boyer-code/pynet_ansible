@@ -1,0 +1,10 @@
+---
+#main.yml from vars
+access_switches:
+  - {hostname: xsw1-CLT, ip_addr: 10.1.1.4, secret: p0tat0, access_vlan: 918, snmp_community: ch@ng3m3, default_gateway: 10.1.1.1, snmpv3: True, }
+  - {hostname: xsw2-CLT, ip_addr: 10.1.2.4, secret: p0tat0, access_vlan: 928, snmp_community: ch@ng3m3, default_gateway: 10.1.2.1, snmpv3: False, }
+  - {hostname: xsw3-CLT, ip_addr: 10.1.3.4, secret: p0tat0, access_vlan: 938, snmp_community: ch@ng3m3, default_gateway: 10.1.3.1, snmpv3: True, }
+  - {hostname: xsw4-CLT, ip_addr: 10.1.4.4, secret: p0tat0, access_vlan: 948, snmp_community: ch@ng3m3, default_gateway: 10.1.4.1, snmpv3: False, }
+  - {hostname: xsw5-CLT, ip_addr: 10.1.5.4, secret: p0tat0, access_vlan: 958, snmp_community: ch@ng3m3, default_gateway: 10.1.5.1, snmpv3: True, }
+  - {hostname: xsw6-CLT, ip_addr: 10.1.6.4, secret: p0tat0, access_vlan: 968, snmp_community: ch@ng3m3, default_gateway: 10.1.6.1, snmpv3: False, }
+

@@ -1,0 +1,240 @@
+#week_6_code_video.txt
+
+#why roles?
+#roles give us default places to look for files
+#and let us reuse files
+#split variables
+#different templates for different models
+#could scp/push file/config from ansible server to device in question
+#can automate further with PoAP/autoinstall
+#ztp grabs config file
+#poap/ztp use dhcp...similar to pxe
+#cisco PoAP includes SN in request
+#arista includes SN, MAC address, HW/SW versions
+#can make decisions based on those...
+
+#arista has a ztp server available that you can run somewhere
+#can detect where in network and something?
+#auto provisioning
+
+-----
+the below is a full playbook, not a role-format setup
+
+arista_vlans.yml
+---
+
+- name: Create Arista VLANs
+  hosts: arista
+
+  tasks:
+  	- name: create BLUE VLAN
+  	  eos_vlan: name=BLUE vlanid=100
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+	- name: create RED VLAN
+	  eos_vlan: name=RED vlanid=200
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+	- name: create GREEN VLAN
+	  eos_vlan: name=GREEN vlanid=300
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+-
+
+#user/pass/host/port are as we'd expect...we're just telling them to grab them from the inventory file
+#transport is telling it how to do the work
+#the eos_vlan part actually calls the eos_vlan module within ANSIBLE/library (in the lab) and will use the Arista API
+
+#KByers has updated our ansible-hosts files with some arista devices...
+#what is arista:vars ...variables ALL arista group shares...
+#ansible_python_interpreter says 'when we execute these variables, use this python'
+
+#ansible is intended to be item potent (depending on the module this may/may not be true)
+#should always check state before trying to make a change...and not make change if we're already good
+#with our VLAN creation above...should check for each VLAN and name match and ensure that VLAN ID is correct
+#if we use the --check flag it'll just tell us what it'd do, no actual changes...
+
+#ansible always look in /library subdirectory relative to CURRENT working directory
+--
+--
+#ansible + arista modules to execute change... run this playbook and it'll push the IF changes...
+
+arista_interface.yml
+---
+- name: Update Arista Interfaces
+  hosts: arista
+
+  tasks:
+  	- name: Setting Ethernet4 description
+  	  eos_interface: name=Ethernet4 description="*** TESTING ***"
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+  	- name: Set Ethe2-4 to access mode, VL200
+  	  eos_switchport: name={{ item }} mode=access access_vlan=200
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+  	   with_items: #this is a YAML list...we're going to loop through this list in the above line 89
+  	   		- Ethernet2
+  	   		- Ethernet3
+  	   		- Ethernet4
+
+
+#arista_trunk.yml
+---
+- name: Arista trunking
+  hosts: arista
+
+  tasks:
+  	- name: Configure Ethernet3 to trunk #remember, have to use full IF name
+  	  eos_switchport: name=Ethernet3 mode=trunk trunk_native_vlan=1
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+  	- name: Configure Ethernet4 to trunk #remember, have to use full IF name
+  	  eos_switchport: name=Ethernet4 mode=trunk trunk_native_vlan=100 trunk_allowed_vlans=100,200
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+#if we review the modules, we can see allowed variables/requirements...
+
+#arista_lag.yml
+---
+- name: Arista LAG/port-channel
+  hosts: arista
+
+  tasks:
+  	- name: Arista LAG
+  	  eos_portchannel: name=Port-Channel1 enable=true description="Lag Interface" members=Ethernet3,Ethernet4 lacp_mode=active #quote on the description to account for the space
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+
+#the above will put the IFs into port-channel1
+
+#have to write memory as well, via separate yml file w/ own task?
+
+#arista_command.yml
+---
+- name: Arista Ansible Testing
+  hosts: arista
+
+  tasks:
+  	- name: Testing command (not item potent)
+  	  eos_command: commands="write memory"
+  	  		username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+  	  register: cmd_out
+
+  	- debug: var=cmd_out
+
+#register above registers output of task into cmd_out variable
+#can then display to screen with var=cmd_out
+--
+--
+#let's create a playbook to backout those previous changes...
+
+#ansible-cleanup.yml
+---
+
+- name: Arista Cleanup
+  hosts: arista
+
+  tasks:
+    - name: Configure Ethernet2-4 for access mode, VLAN1
+      eos_switchport: name={{ item }} mode=access access_vlan=1 trunk_allowed_vlans=1-4094 trunk_native_vlan=1
+        	username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https
+	  	with_items:
+	  	  - Ethernet2
+	  	  - Ethernet3
+	  	  - Ethernet4
+
+   - name: Reset Ethernet4 description to default
+   	 eos_interface: name=Ethernet4 description=""
+        	username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https   	 
+
+   - name: Remove VLANs
+   	 eos_vlan: name={{item.name}} vlanid={{item.vlanid}} state=absent
+        	username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https   	 
+		with_items:
+		 - {name: BLUE, vlanid: 100}
+		 - {name: RED, vlanid: 200}
+		 - {name: GREEN, vlanid: 300}
+
+    - name: Cleanup LAG
+      eos_portchannel: name=Port-Channel1 state=absent
+          	username={{ eapi_username }}
+  	  		password={{ eapi_password }}
+  	  		host={{ eapi_hostname }}
+  	  		port={{ eapi_port }}
+  	  		transport=https   	 
+
+#the state=absent is the big kicker as it removes them..ensures their state is absent
+
+#need to include the write mem file / operation again next time...
+
+#cisco-ansible_file_transfer is an ansible library for attempting to manage cisco configs
+#need /library/cisco_file_transfer.py
+
+#uses SSH & SCP to move files as needed
+
+#cisco_test.yml
+---
+
+- name: Cisco IOS testing
+  hosts: cisco
+  gather_facts: False
+
+  tasks:
+  - name: Testing file transfer
+    cisco_file_transfer:
+       source_file="/home/jboyer/ANSIBLE/cisco_logging.txt"
+       dest_file=cisco_logging.txt
+       overwrite=true
+       enable_scp=true
+       host={{ host }}
+       port={{ port }}
+       username={{ username}}
+       password = {{ password }}
+

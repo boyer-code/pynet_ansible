@@ -1,0 +1,220 @@
+#week_7_code_video.txt
+
+#screen scraping vs APIs
+#ssh/telnet into router w/ code = screen scraping...ssh/telnet are really designed for human interaction, not code
+#have to add delays and accommodate the design difference
+#output often just strings...not structured in a way that's repeatable/clean/programmable
+#these strings can change frequently...require proper parsing, etc
+#API = application programming interface
+#expecting a computer to interact with it
+#generally returns structured data
+#easier to manipulate
+
+#eAPI = arista's API
+#uses JSON RPC over HTTP
+#connecting via HTTP/HTTPS to switch/router
+#inside connection will pass JSON data
+#ansible uses YAML, JSON is similar (see earlier classes)
+#JSON = JavaScript Object Notation
+#construct: combo of lists & dictionaries (like YAML)
+
+#less human readable that YAML
+#easy to work with in python
+#inside JSON connection we're using RPC
+#RPC = Remote Procedure Call...
+#RPC calls a function ON the remote box and then returns a response across the connection
+
+#JSON RPC has characteristics
+#first must specify method (remote function we're calling on the end device)
+#then specify parameters associated w/ method
+#then specify ID
+#ID is to match your request with router response
+
+#eAPI request structure:
+#should be able to hit ip of switch w/ user+password+API port (and then Chrome/FF will hide that info in URL) and see API
+#{} in JSON indicate it's a dictionary (set of k/v pairs...unordered...they're called JSON objects)
+#JSON also has lists inside of [] (called JSON arrays)
+#strings are indicated by ""
+#numbers, null value, and boolean (lower true or false) allowed
+#JSON must NOT have a comma at the end of a list/dictionary for last key/value pair
+#for eAPI, "method": "runCmds" should always be the case
+#always version 1 under params
+
+{
+	"jsonrpc": "2.0",
+	"method": "runCmds",
+	"params": {
+		"version": 1,
+		"cmds": [
+			"
+			show version"
+			],
+			"format": "
+			json"
+		},
+	"id": "
+	CapiExploerer123"
+}
+
+import jsonrpclib
+ip = '50.76.53.27'
+port = '8243'
+username = 'eapi'
+password = '99saturday'
+switch_url = 'https://{}:{}@{}:{}'.format(username, password, ip, port) #format is username, password, IP, port...could use %s if you wanted as well
+
+switch_url = switch_url + "/command-api" #append that to our string...could have done it above...
+
+remote_connect = jsonrpclib.Server(switch_url) #this creates variable calling the server class in jasonrpclib library passing in that URL
+
+>>> remote_connect
+<ServerProxy for eapi:99saturday@50.76.53.27:8243/command-api>
+
+
+response = remote_connect.runCmds(1, ['show version'])
+#object.method (should always be runCmds)....(1 for version 1), then a list of the commands we want to execute...don't need to specify format as JSON is default
+
+#i got an SSL error, but you should get version returned...
+from pprint import pprint
+pprint(response)
+[{u'architecture': u'i386',
+  u'bootupTimestamp': 123.23,
+  u'hardwareRevision': u'',
+  u'internalBuildId': u'57basdf'}]
+
+returned as a list w/ dictionary
+
+next tried show arp
+response = remote_connect.runCmds(1, ['show arp'])
+
+same thing...
+
+[{u'ipv4Neighbors': [{u'hwAddress': u'001f.9e92.16fb'}]}] etc
+
+len(response) shows us how many elements are in the list returned
+some_dict = response[0] sets the list into a dict
+some_dict.keys() #will show us all of hte keys we have
+ipv4_neigh = some_dict['ipV4Neighbors']
+ipv4_neigh = [{MAC, interface, age, etc}]
+len(ipv4_neigh)
+5
+
+ipv4_neigh[0]
+shows us first entry in that list...which is IP, age, inbound interface, MAC, outbound interface
+can cycle through entries...or LOOP through them...
+
+remote_connect #get it open
+commands = []
+commands.append ('vlan 225') #obviously need to be in enable mode and config mode to execute that command...
+#api requires the order of operations stuff as via CLI
+commands.insert(0, 'configure terminal')
+commands.insert(0, {'cmd': 'enable', 'input': ''}) #input is password we'd be typing...currently blank
+
+>>>commands
+[{'input': '', 'cmd': 'enable'}, 'configure terminal', 'vlan 225']
+
+commands.append('name green')
+>>>commands
+[{'input': '', 'cmd': 'enable'}, 'configure terminal', 'vlan 225', 'name green']
+
+remote_connect.runCmds(1, commands) #remember, must use .runCmds, version must be 1, and the commands is our list
+[{}, {}, {}, {}] #returned and tells us no issues
+
+commands[2] = 'vlan 226'
+commands[3] = 'name black'
+
+#run it again, and it'll send those new parameters
+
+#not all show commands are available via API (for some reason)
+
+#arista has created pyeapi library that makes it easier to interface with their API
+
+import pyeapi
+
+this library has a configuration file, .eapi.conf that looks for certain parameters (username, password, host, port, tranposrt) (looks in user's home directory by default)
+
+should look something like:
+[connection:pynet-sw2]
+username: eapi
+password: 7maxwell7
+host: 50.76.53.27
+port: 8343
+transport: https
+
+
+import pyeapi
+pynet_sw2 = pyeapi.connect_to("pynet-sw2") #this name is from the config file
+
+>>> pynet_sw2
+Node(connection=EapiConnection(transport=https://50.76.53.27:8343//command-api))
+>>> 
+
+#remember this is still using same mechanism as before...
+
+>>> dir(pynet_sw2)
+['__class__', '__delattr__', '__dict__', '__doc__', '__format__', '__getattribute__', '__hash__', '__init__', '__module__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_connection', '_enablepwd', '_running_config', '_startup_config', 'api', 'autorefresh', 'config', 'connection', 'enable', 'enable_authentication', 'get_config', 'refresh', 'run_commands', 'running_config', 'section', 'settings', 'startup_config']
+#these are our available options...
+
+>>> pynet_sw2.get_config()
+['! Command: show running-config', '! device: pynet-sw2 (vEOS, EOS-4.15.4F)', '!', '! boot system flash:/vEOS-lab.swi', '!', 'transceiver qsfp default-mode 4x10G', '!', 'hostname pynet-sw2', '!', 'spanning-tree mode mstp', '!', 'no aaa root', '!', 'username admin privilege 15 role network-admin secret 5 $1$uhMwDrZX$RpuPyB/XjaBFMbViZ8GYu0', 'username admin1 privilege 15 secret 5 $1$swIL7rgK$nYRKAdQRJcrbfEHgneBX61', 'username eapi secret 5 $1$nFy0uuBw$IfXacPon9IEUHZ7s/b0AQ.', '!', 'vlan 226', '   name black', '!', 'vlan 255', '   name red', '!', 'interface Ethernet1', '   spanning-tree portfast', '!', 'interface Ethernet2', '!', 'interface Ethernet3', '!', 'interface Ethernet4', '!', 'interface Ethernet5', '!', 'interface Ethernet6', '!', 'interface Ethernet7', '!', 'interface Management1', '   shutdown', '!', 'interface Vlan1', '   ip address 10.220.88.29/24', '!', 'ip route 0.0.0.0/0 10.220.88.1', '!', 'ip routing', '!', 'management api http-commands', '   no shutdown', '!', '!', 'end', '']
+>>> 
+
+#returned whole config as a list
+
+my_config = pynet_sw2.get_config()
+for i in my_config:
+	print i
+
+would give you everything printed like we're used to
+
+>>> help(pynet_sw2.get_config)
+#prints help file and tells us we can have it returned as a string with (as_string=True) if we want
+
+pynet_sw2.enable("show version") #the .enable indicates it's going to run it as enable mode...only looking for commands
+>>> pynet_sw2.enable("show version")
+[{'command': 'show version', 'result': {u'memTotal': 1897648, u'version': u'4.15.4F', u'internalVersion': u'4.15.4F-2923910.4154F', u'serialNumber': u'', u'systemMacAddress': u'52:54:ab:1b:a7:cb', u'bootupTimestamp': 1287456475.08, u'memFree': 382796, u'modelName': u'vEOS', u'architecture': u'i386', u'internalBuildId': u'd8a3c846-c735-4766-93cd-82bb7427da51', u'hardwareRevision': u''}, 'encoding': 'json'}]
+>>> 
+
+>>> s_v = pynet_sw2.enable("show version")
+>>> pprint(s_v)
+[{'command': 'show version',
+  'encoding': 'json',
+  'result': {u'architecture': u'i386',
+             u'bootupTimestamp': 1287456475.08,
+             u'hardwareRevision': u'',
+             u'internalBuildId': u'd8a3c846-c735-4766-93cd-82bb7427da51',
+             u'internalVersion': u'4.15.4F-2923910.4154F',
+             u'memFree': 382796,
+             u'memTotal': 1897648,
+             u'modelName': u'vEOS',
+             u'serialNumber': u'',
+             u'systemMacAddress': u'52:54:ab:1b:a7:cb',
+             u'version': u'4.15.4F'}}]
+
+if you just wanted the dictionary, you could extract the list
+s_v = s_v[0] then it's just a dict
+
+>>> s_v = s_v[0]
+>>> print s_v
+{'command': 'show version', 'result': {u'memTotal': 1897648, u'version': u'4.15.4F', u'internalVersion': u'4.15.4F-2923910.4154F', u'serialNumber': u'', u'systemMacAddress': u'52:54:ab:1b:a7:cb', u'bootupTimestamp': 1287456475.08, u'memFree': 382796, u'modelName': u'vEOS', u'architecture': u'i386', u'internalBuildId': u'd8a3c846-c735-4766-93cd-82bb7427da51', u'hardwareRevision': u''}, 'encoding': 'json'}
+>>> s_v = s_v['result']
+>>> print s_v
+{u'memTotal': 1897648, u'version': u'4.15.4F', u'internalVersion': u'4.15.4F-2923910.4154F', u'serialNumber': u'', u'systemMacAddress': u'52:54:ab:1b:a7:cb', u'bootupTimestamp': 1287456475.08, u'memFree': 382796, u'modelName': u'vEOS', u'architecture': u'i386', u'internalBuildId': u'd8a3c846-c735-4766-93cd-82bb7427da51', u'hardwareRevision': u''}
+
+cmds = ['vlan 225', 'name red', 'vlan 226', 'name black']
+
+#to execute commands can do
+pynet_sw2.config(cmds)
+
+#expect empty dictionaries as output if it ran successfully (one per command)
+
+#can execute no commands if wanted/needed
+
+pynet_sw2.enable("write memory") #to write mem...    .config doesn't do that
+
+>>> pynet_sw2.enable("write memory")
+[{'command': 'write memory', 'result': {u'messages': [u'Copy completed successfully.']}, 'encoding': 'json'}]
+>>> 
+
+#pyeapi easier than jsonrpclib
+

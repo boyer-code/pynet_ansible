@@ -1,0 +1,36 @@
+Tuples
+Tuples are a sequence that behave much like a list, except:
+Tuples are immutable (cannot be altered)
+displayed surrounded by parenthesis '(,)' rather than brackets '[,]'
+surrounding by parenthesis is just visual help; Comma is what makes tuple type
+cannot sort, append, reverse, reorder, etc
+can only: count and index
+Tuples are more efficient, they use less processing time since fewer operations are possible.
+Tuples are great for "temporary variables" because they are fast and easy to work with.
+Tuples can be placed on the left hand side on an assignment statement, the parenthesis can even be omitted.
+(x,y) = (4, 'fred')
+print y
+fred
+Tuples and Dictionaries
+The 'items()' method in dictionaries returns a list of tuples (key, value).
+Tuples are Comparable
+The contents of a tuple can be compared and evaluated, running left to right through the listed variables. <, >, <=, =>, ==
+~~Tuples can be sorted within a dictionary because they can be compared against each other. (sorted by keys)~~
+'sorted()', takes a sequence as a parameter and returns a sorted sequence.
+Sort by value instead of key:
+Can be done with a for loop, by reversing the value and key (v,k).
+c = {'a':10, 'b':1, 'c':22}
+tmp = list()
+for k, v in c.items():
+    tmp.append( (v,k) )
+print tmp
+[(10,'a'),(22,'c'),(1,'b')]
+tmp.sort(reverse=True)
+print tmp
+[(22,'c'),(10,'a'),(1,'b')] 
+List Comprehension
+List comprehension (represented by [,]) creates a dynamic list.
+print sorted( [ (v,k) for k,v in c.items() ] )
+The above can sort a list of items in a dictionary(c) by the value. By first reversing the tuples (v,k) and then sorting it.
+Chapter 10 Exercises
+The above page is intended as a place for students to work out solutions and answers to the exercises from the textbook. Please do not post answers to exercises that are actual graded assignments.

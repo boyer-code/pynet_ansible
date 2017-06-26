@@ -1,0 +1,79 @@
+Lecture Notes
+Lists
+Collection - allows us to put many values in a single variable.
+Simple variables are not collections. The previous value is overwritten when changed.
+A List is made up of list 'constants'. Lists are surrounded by square brackets [] and the constants in the list are separated by commas. ([2,4,6,8])
+A List element can be any Python object, even another list
+A List can be empty
+Lists are mutable (they can be changed)
+When len() is used on a list, it counts the number of constants that make up the list. (not the number of characters)
+Lists can be concatenated using +
+Lists can be sliced
+List is a unique type that can be checked using type() (result: <type 'list'>)
+An empty list can be created with list()
+Lists can be tested for contents using in/not in
+List is an ordered sequence
+A list can be sorted with .sort(). Sort changes the list permanently.
+List Methods
+Read more about list Methods online at: http://docs.python.org/tutorial/datastructures.html
+Methods: append, count, extend, index, insert, pop, remove, reverse, sort
+append() - use to add constants to the end of a list (lst.append('word'))
+remove() - use to remove constants from a list
+List Functions
+len() - find length, max() - find highest value, min() - find lowest value, sum() - add all values
+average can be found with sum()/len()
+Selection in a List
+Look up items in a list using an index specified in square brackets. The number in the index indicates the numbered item in the list.
+For example: For friends = ['Joseph','Glen','Sally'] using "print friends [1]" will print out "Glen" (remember numbering starts with zero)
+Using Strings and Lists Together
+"Split" breaks a string into parts and produces a list of strings.
+abc = 'With three words'
+stuff = abc.split()
+print stuff
+['With','three','words']
+* Split sees multiple spaces as one, creates one split. * Define a delimiter for split by entering a parameter (i.e. split(';') to use semicolon as a delimiter)
+Glossary
+Mutable - an object which allows an element of its contents to be changed. Lists are mutable meaning that one value can be changed without affecting the other objects in the list. (i.e. "lotto[2] = 28" changes the value of the third list item to '28')
+Immutable - an object which does not allow an element of its contents to be changed. Strings are immutable, meaning once the value is defined it cannot be changed. (it can be overwritten, but not changed) For example, a single letter's case cannot be changed within the string. (i.e. "fruit[0] = 'b'" results in an error)
+Range is a function that creates and returns a list of numbers that range from zero to one less than the parameter. (i.e. "print range(4)" returns "[0,1,2,3]")
+Del
+Del is a command which removes what corresponds to the index of the list. For example, if we have
+a = [1, 2, 3, 4, 5] del a[0] returns [2, 3, 4, 5].
+If we have multiple arguments after del, then del first updates the list, and then removes the next argument. For example if
+a = [1, 2, 3, 4, 5] del a[0], a[2] returns [2, 3, 5], since a[0] first gets deleted yielding [2, 3, 4, 5], then since the 2-element of [2, 3, 4, 5] is 4, 4 gets deleted.
+Chapter 8 Exercises
+Here's an example of a solution for exercise 8.6:
+# reads numbers until the program is done and
+# prints the maximum and the minimum
+
+#while loop to append numbers to the list
+
+working_list = list()
+
+while True:
+    # handle the edge cases
+    inp = raw_input('Enter a number or "done"\n')
+    if inp == "done":
+        # check for empty list    
+        if len(working_list) < 1:
+            working_list.append("None")
+        break
+    # check for empty line
+    if len(inp) < 1:
+        if len(working_list) < 1:
+            working_list.append("None")
+        break
+    # do the work
+    try:
+        num = float(inp)
+    except:
+        print "Invalid input"
+        continue
+    working_list.append(num)   
+
+# prints results
+print "The minimum is" , min(working_list)
+print "The maximum is" , max(working_list)   
+More Resource Topics
+Information about built-in Python 3 functions. https://docs.python.org/3/library/functions.html
+Add resources for this chapter to this page.

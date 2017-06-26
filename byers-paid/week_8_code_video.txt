@@ -1,0 +1,513 @@
+database
+have information we want to r/w/access
+inconvenient to deal with a bunch of individual files
+
+store information in DB for easier access as one point of reference
+
+Kirk doesn't like / want to use SQL...nor the security concerns/risks that go with it
+
+programming languages use ORM (object relational mapper)
+lets programming environment have native interface with DB
+ORM takes care of translation & handling of interaction w/ DB & SQL commands
+many ORMs in python
+
+Django is one, and Kirk's favorite
+
+Django = python web application framework
+one of most popular
+
+
+in lab: /home/jboyer/DJANGOX/djproject
+in lab there's /djproject/djproject/settings
+inside the base /djproject/manage.py and /net_system
+
+will find load_credentials.py, load_devices.py, models.py inside /djproject/net_system
+
+(applied_python)[jboyer@ip-172-30-0-39 net_system]$ cat models.py 
+from django.db import models
+
+class Credentials(models.Model):
+    username        = models.CharField(max_length=50)
+    password        = models.CharField(max_length=50)
+    description     = models.CharField(max_length=200, blank=True, null=True)
+
+    def __unicode__(self):
+        return u'%s' % (self.username)
+
+class NetworkDevice(models.Model):
+    device_name     = models.CharField(primary_key=True, max_length=80)
+    device_type     = models.CharField(max_length=50)
+    ip_address      = models.GenericIPAddressField()
+    port            = models.IntegerField()
+    vendor          = models.CharField(max_length=50, blank=True, null=True)
+    model           = models.CharField(max_length=50, blank=True, null=True)
+    os_version      = models.CharField(max_length=100, blank=True, null=True)
+    serial_number   = models.CharField(max_length=50, blank=True, null=True)
+    uptime_seconds  = models.IntegerField(blank=True, null=True)
+    credentials     = models.ForeignKey(Credentials, blank=True, null=True)
+
+    def __unicode__(self):
+        return u'%s' % (self.device_name)
+
+under networkdevice class, we're specifying a number of required fields...and specifying what it's data type will be...a character field, integers, boolean, etc...a char can have length...note the GenericIPAddressField
+
+device_name, type, ip_address, port are 100% required for networkdevices
+
+under vendor, we can specify blank=True and null=True to tell the DB it's ok if they're empty/null (blank = True for django, null = True for DB)
+
+within DJANGOX/djproject, have to build manage.py
+
+#!/usr/bin/env python
+import os
+import sys
+
+if __name__ == "__main__":
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "djproject.settings")
+
+    from django.core.management import execute_from_command_line
+
+    execute_from_command_line(sys.argv)
+
+python manage.py makemigrations
+
+creates information from models.py  learns how to generate the credentials and networkdevice tables
+
+python manage.py migrate
+will initialize & setup the database
+
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ python manage.py makemigrations
+Migrations for 'net_system':
+  0001_initial.py:
+    - Create model Credentials
+    - Create model NetworkDevice
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ 
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ python manage.py migrate
+Operations to perform:
+  Synchronize unmigrated apps: staticfiles, messages
+  Apply all migrations: admin, contenttypes, net_system, auth, sessions
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+  Installing custom SQL...
+Running migrations:
+  Rendering model states... DONE
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying net_system.0001_initial... OK
+  Applying sessions.0001_initial... OK
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ 
+
+
+should then see /db.net_system in /django/
+
+
+/net_system/load_devices.py
+from net_system.models import NetworkDevice
+import django
+
+def main():
+    django.setup()
+
+    pynet_rtr1 = NetworkDevice(
+        device_name='pynet-rtr1',
+        device_type='cisco_ios',
+        ip_address='50.76.53.27',
+        port=22,
+    )
+    pynet_rtr1.save()
+
+    pynet_rtr2 = NetworkDevice.objects.get_or_create(
+        device_name='pynet-rtr2',
+        device_type='cisco_ios',
+        ip_address='50.76.53.27',
+        port=8022,
+    )
+    print pynet_rtr2
+
+    pynet_sw1 = NetworkDevice.objects.get_or_create(
+        device_name='pynet-sw1',
+        device_type='arista_eos',
+        ip_address='50.76.53.27',
+        port=8222,
+    )
+    print pynet_sw1
+
+    pynet_sw2 = NetworkDevice.objects.get_or_create(
+        device_name='pynet-sw2',
+        device_type='arista_eos',
+        ip_address='50.76.53.27',
+        port=8322,
+    )
+    print pynet_sw2
+
+    pynet_sw3 = NetworkDevice.objects.get_or_create(
+        device_name='pynet-sw3',
+        device_type='arista_eos',
+        ip_address='50.76.53.27',
+        port=8422,
+    )
+    print pynet_sw3
+
+    pynet_sw4 = NetworkDevice.objects.get_or_create(
+        device_name='pynet-sw4',
+        device_type='arista_eos',
+        ip_address='50.76.53.27',
+        port=8522,
+    )
+    print pynet_sw4
+
+    juniper_srx = NetworkDevice.objects.get_or_create(
+        device_name='juniper-srx',
+        device_type='juniper',
+        ip_address='50.76.53.27',
+        port=9822,
+    )
+    print juniper_srx
+
+if __name__ == "__main__":
+    main()
+
+
+Primary Key is a unique identifier...we set device_name as primary_key in our classes in models.py
+
+may want to consider serial# instead of device_name
+
+if you don't specify a primary key, django will create a field called 'id' and assign a unique ID to each table entry
+
+in load_devices.py we import NetworkDevice from the net_system.models classes
+
+in load_devices.py we have our 
+
+note the .save in load_devices...without that, it WILL NOT save your device
+
+you can do NetworkDevice.objects.get_or_create()  {see pynet_rtr2 above}
+if it exists, will just grab it
+if it doesn't, create
+won't cause error if you run script multiple times...pynet_rtr1's above config will break it since that already exists...should probably use .objects.get_or_create often
+
+check load_credentials.py for similar
+
+from net_system.models import Credentials
+import django
+
+
+if __name__ == "__main__":
+
+    django.setup()
+
+    std_creds = Credentials.objects.get_or_create(
+        username = 'pyclass',
+        password = '88newclass',
+        description = 'Standard credentials'
+    )
+    print std_creds
+
+    arista_creds = Credentials.objects.get_or_create(
+        username = 'admin1',
+        password = '99saturday',
+        description = 'Arista credentials'
+    )
+    print arista_creds
+
+------
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ pwd
+/home/jboyer/DJANGOX/djproject
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ python manage.py makemigrations
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ python manage.py migrate
+
+(applied_python)[jboyer@ip-172-30-0-39 net_system]$ python load_credentials.py 
+(<Credentials: pyclass>, True)
+(<Credentials: admin1>, True)
+(applied_python)[jboyer@ip-172-30-0-39 net_system]$ python load_devices.py 
+(<NetworkDevice: pynet-rtr2>, True)
+(<NetworkDevice: pynet-sw1>, True)
+(<NetworkDevice: pynet-sw2>, True)
+(<NetworkDevice: pynet-sw3>, True)
+(<NetworkDevice: pynet-sw4>, True)
+(<NetworkDevice: juniper-srx>, True)
+
+------
+running above, we've created our DB and loaded objects into it (credentials and network devices)
+
+how do we access?
+
+python manage.py shell
+
+loads a shell:
+
+from net_system.models import NetworkDevice
+net_devices = NetworkDevice.objects.all()
+print net_devices
+[<NetworkDevice: pynet-rtr1>, <NetworkDevice: pynet-rtr2>, <NetworkDevice: pynet-sw1>, <NetworkDevice: pynet-sw2>, <NetworkDevice: pynet-sw3>, <NetworkDevice: pynet-sw4>, <NetworkDevice: juniper-srx>]
+exit()
+(applied_python)[jboyer@ip-172-30-0-39 djproject]$ 
+
+>>> creds = Credentials.objects.all()
+>>> creds
+[<Credentials: pyclass>, <Credentials: admin1>]
+>>> type(creds)
+<class 'django.db.models.query.QuerySet'>
+
+>>> for a_device in net_devices:
+...     print a_device.device_name
+... 
+pynet-rtr1
+pynet-rtr2
+pynet-sw1
+pynet-sw2
+pynet-sw3
+pynet-sw4
+juniper-srx
+>>> cisco1 = net_devices[0]
+>>> cisco1
+<NetworkDevice: pynet-rtr1>
+>>> cisco1.device_name
+u'pynet-rtr1'
+>>> cisco1.ip_address
+u'50.76.53.27'
+>>> 
+
+in NetworkDevices, we have 'credentials' which is a foreign key (a way to access b/t tables)...accesses a remote key for another table...
+
+>>> creds
+[<Credentials: pyclass>, <Credentials: admin1>]
+>>> std_creds = creds[0]
+>>> arista_creds = creds[1]
+>>> std_creds
+<Credentials: pyclass>
+>>> arista_creds
+<Credentials: admin1>
+
+>>> for a_device in net_devices:
+...     if 'pynet-sw' in a_device.device_name:
+...         a_device.credentials = arista_creds
+...     else:
+...         a_device.credentials = std_creds
+...     a_device.save()
+... 
+
+the above (with save super important) will update the entries in the DB with the correct credentials
+
+>>> arista_creds.networkdevice_set.all()
+[<NetworkDevice: pynet-sw1>, <NetworkDevice: pynet-sw2>, <NetworkDevice: pynet-sw3>, <NetworkDevice: pynet-sw4>]
+
+>>> std_creds.networkdevice_set.all()
+[<NetworkDevice: pynet-rtr1>, <NetworkDevice: pynet-rtr2>, <NetworkDevice: juniper-srx>]
+>>> 
+
+----
+>>> a_device = NetworkDevice.objects.get(device_name='pynet-rtr1')
+>>> a_device
+<NetworkDevice: pynet-rtr1>
+>>> a_device[0]
+Traceback (most recent call last):
+  File "<console>", line 1, in <module>
+TypeError: 'NetworkDevice' object does not support indexing
+>>> a_device.vendor
+>>> NetworkDevice.objects.all()
+[<NetworkDevice: pynet-rtr1>, <NetworkDevice: pynet-rtr2>, <NetworkDevice: pynet-sw1>, <NetworkDevice: pynet-sw2>, <NetworkDevice: pynet-sw3>, <NetworkDevice: pynet-sw4>, <NetworkDevice: juniper-srx>]
+>>> type(a_device)
+<class 'net_system.models.NetworkDevice'>
+>>> a_device.credentials
+<Credentials: pyclass>
+>>> a_device.vendor
+>>> a_device.vendor = 'cisco'
+>>> a_device.vendor
+'cisco'
+>>> a_device.banana
+Traceback (most recent call last):
+  File "<console>", line 1, in <module>
+AttributeError: 'NetworkDevice' object has no attribute 'banana'
+>>> a_device.vendor
+'cisco'
+>>> a_device.model
+>>> a_device.port
+22
+>>> a_device.model = '881'
+>>> a_device.save()
+>>> a_device.port = 5222
+>>> a_device.save()
+>>> 
+
+-----
+#!/usr/bin/env python
+
+from netmiko import ConnectHandler
+from datetime import datetime
+import django
+from net_system.models import NetworkDevice, Credentials
+
+
+
+def main():
+	django.setup()
+	pass
+
+	devices = NetworkDevice.objects.all()
+	print devices
+
+if __name__ == "__main__":
+	main()
+
+----------
+#!/usr/bin/env python
+
+from netmiko import ConnectHandler
+from datetime import datetime
+import django
+from net_system.models import NetworkDevice, Credentials
+import threading
+from multiprocessing import Process
+from Queue import Queue
+from threading import Thread
+
+pynet1 = {
+	'device_type': 'cisco_ios',
+	'username': 'pyclass',
+}
+
+pynet2 = {
+	'device_type': 'cisco_ios',
+	'username': 'pyclass',
+	'secret': '',
+	'port': 8022,
+	'ip'
+}
+
+juniper_srx = {
+	'device_type': 'juniper',
+	'username': 'pyclass',
+	'port': 9822,
+}
+
+def show_arp(a_device, debug=False):
+	net_connect = ConnectHandler(**a_device)
+	output = net_connect.send_command("show arp")
+	if debug:
+		print
+		print '#' * 80
+		print "Device: {}:{}".format(net_connect.ip, net_connect.port)
+		print
+		print output
+		print '#' * 80
+		print
+
+def show_arp_queue(a_device, q):
+	my_dict = {}
+	port = a_device.get('port', 22)
+	ip_addr = a_device.get('ip')
+	my_device = ip_addr + ":" + str(port)
+	net_connect = ConnectHandler(**a_device)
+	my_dict[my_device] = net_connect.send_command("show arp")
+	q.put(my_dict)
+
+def serial_execution():
+	start_time = datetime.now()
+	for a_device in (pynet1, pynet2, juniper_srx):
+		show_arp(a_device, debug=True)
+	print "\nElapsed time: " + str(datetime.now() - start_time)
+
+------------------
+#!/usr/bin/env python
+
+from netmiko import ConnectHandler
+from datetime import datetime
+import django
+from net_system.models import NetworkDevice, Credentials
+
+def main():
+    django.setup()
+    pass
+
+    devices = NetworkDevice.objects.all()
+    for a_device in devices:
+        print a_device
+        device_type = a_device.device_type
+        port = a_device.port
+        secret = ''
+        ip = a_device.ip_address
+        creds = a_device.credentials
+        username = creds.username
+        password = creds.password
+        print device_type, port, ip, username, password
+        try:
+            remote_conn = ConnectHandler(device_type=device_type, ip=ip, username=username, password=password, port=port, secret=secret)
+            print remote_conn.send_command("show arp")
+
+            print
+            print '#' * 80
+            print "Device: {}:{}".format(net_connect.ip, net_connect.port)
+            print
+            print output
+            print '#' * 80
+            print
+
+        except:
+            print "Couldn't connect to",a_device
+    #print devices
+
+if __name__ == "__main__":
+    main()
+
+
+------------------
+#!/usr/bin/env python
+
+from netmiko import ConnectHandler
+from datetime import datetime
+import django
+from net_system.models import NetworkDevice, Credentials
+
+def main():
+    django.setup()
+    pass
+
+    starttime = datetime.now()
+
+    devices = NetworkDevice.objects.all()
+    for a_device in devices:
+        print a_device
+        device_type = a_device.device_type
+        port = a_device.port
+        secret = ''
+        ip = a_device.ip_address
+        creds = a_device.credentials
+        username = creds.username
+        password = creds.password
+        print device_type, port, ip, username, password
+        try:
+            remote_conn = ConnectHandler(device_type=device_type, ip=ip, username=username, password=password, port=port, secret=secret)
+            print remote_conn.send_command("show arp")
+
+            print
+            print '#' * 80
+            print "Device: {}:{}".format(net_connect.ip, net_connect.port)
+            print
+            print output
+            print '#' * 80
+            print
+
+        except:
+            print "Couldn't connect to",a_device
+
+    elapsed_time = datetime.now() - start_time
+    print "Elapsed time: {}".format(elapsed_time)
+
+if __name__ == "__main__":
+    main()
+
+
+royal ark mariner set of degrees moored to ark lodges
+noachide rituals
+lodge of RAMs opened on this stone that is white
+word in original language means purple
+name of stone?
+
+#peruvianhandball

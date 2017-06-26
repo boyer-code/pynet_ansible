@@ -1,0 +1,405 @@
+week_4_videos.txt
+---vid 1
+import paramiko
+from getpass import getpass
+
+ip_addr = '50.76.53.27'
+username = 'pyclass'
+port = 8022
+password = getpass() #requests user input for password and hides it
+
+
+remote_conn_pre = paramiko.SSHClient()
+remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy()) #tells it to auto add keys...kinda dangerous, but will get a known_hosts error without it
+
+remote_conn_pre.connect(ip_addr, username=username, password=password, look_for_keys=False, allow_agent=False, port=port) #here's where we actually connect
+remote_conn = remote_conn_pre.invoke_shell() #needed
+
+outp = remote_conn.recv(5000) #receive up to 5000 bytes
+
+print outp #should return router prompt at this point
+
+remote_conn.send("show ip int br\n") #sends our command and returns how many bytes it sent
+
+outp = remote_conn.recv(5000) #receive up to 5000 bytes
+
+print outp #should return results of show ip int br now
+----
+---vid2
+
+import paramiko
+from getpass import getpass
+
+ip_addr = '50.76.53.27'
+username = 'pyclass'
+port = 8022
+password = getpass() #requests user input for password and hides it
+
+remote_conn_pre = paramiko.SSHClient()
+#remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy()) #tells it to auto add keys...kinda dangerous, but will get a known_hosts error without it
+
+remote_conn_pre.load_system_host_keys() #if you use host keys, this will tell paramiko to attempt to load them
+
+remote_conn_pre.connect(ip_addr, username=username, password=password, look_for_keys=False, allow_agent=False, port=port) #here's where we actually connect
+remote_conn = remote_conn_pre.invoke_shell() #needed
+
+#remote_conn_pre.load_host_keys("/home/user/.ssh/known_hosts") can specify a file from which to load hosts keys
+
+remote_conn = remote_conn_pre.invoke_shell() #needed if you wnat to send multiple commands
+
+stdin, stdout, stderr = remote_conn_pre.exec_command('show ip int br\n')#see other com
+print stdout.read() #these two will let you issue one command and read the output
+#these will fail if you try to use multiple back to back (if they're exec commands)
+#paramiko 'feature' only lets you do one thing inside channel/part of TCP session
+#after you execute exec command, paramiko tears down ssh session
+
+#would have to reconnect if you want to execute another exec command without using invoke_shell from above
+
+remote_conn = remote_conn_pre.invoke_shell() #needed if you wnat to send multiple commands...this will keep your session open for the shell session and allow you to send multiple commands (interactive session)
+
+#can then multiple commands w/ session open
+
+---
+---vid3
+
+import paramiko
+from getpass import getpass
+
+ip_addr = '50.76.53.27'
+username = 'pyclass'
+port = 8022
+password = getpass()
+
+remote_conn_pre = paramiko.SSHClient()
+remote_conn_pre.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+remote_conn_pre.connect(ip_addr, username=username, password=password, look_for_keys=False, allow_agent=False, port=port)
+remote_conn = remote_conn_pre.invoke_shell()
+
+outp = remote_conn.recv(5000)
+
+print outp #should get router prompt at this point)
+
+remote_conn.settimeout(6.0) #sets timeout for how long to wait before timeout
+remote_conn.gettimeout() #displays timeout
+
+outp = remote_connn.recv(5000) will wait timeout to see if there's anything new
+
+remote_conn.recv_read(): #lets us know if there's any data available to read (returns T/F)
+False
+
+outp = remote_conn.send("\n")
+remote_conn.recv_ready()
+True
+
+outp = remote_conn.recv(5000)
+print outp #should be router prompt again
+
+remote_conn.recv_ready() #back to false again since we just read it all via outp
+False
+
+outp = remote_conn.recv(65535) #65535 bytes is largest we can read there
+
+outp = remote_conn.send("term len 0\n")
+outp = remote_conn.recv(65535)
+print outp
+term len 0
+pynet_rtr2#
+
+outp = remote_conn.send("show run\n")
+outp = remote_conn.recv(65535)
+print outp
+
+you can have a while loop that appends to the file if greater than 65535 bytes
+
+such as
+
+if remote_conn.recv_read():
+	output += remote_conn.recv(MAX_BUFFER)
+	remote_conn.settimeout(4.0)
+
+doing line by line, easy to add delays, but programmatically need to add delays
+such as time.sleep(x) so be sure to import time
+ 
+----
+---vid4
+
+pexpect
+
+behaves like TCL/expect (whatever that means ;) )
+---
+#!/usr/bin/env python
+
+import pexpect
+import sys
+import time
+from getpass import getpass
+
+def main():
+	ip_addr = '50.76.53.27'
+	username = 'pyclass'
+	port = 8022
+	password = getpass()
+
+	#ssh -l pyclass 50.76.53.27 -p 8022
+	ssh_conn = pexpect.spawn('ssh -l {} {} -p {}'.format(username, ip_addr, port)) #spawns child process for ssh
+	ssh_conn.logfile = sys.stdout #prints output to stdout
+	ssh_conn.timeout = 3
+	ssh_conn.expect('ssword:') #looking for something that says ssword:
+
+	ssh_conn.sendline(password) #then send the password
+	ssh_conn.expect('#') #look for a #
+
+	router_name = ssh_conn.before #print what we saw before the # (so between the two expects)
+	router_name = router_name.strip()
+
+	ssh_connect.after #will contain what you matched and what's after (so includes the #)
+	ssh_conn.sendline("show ip int br") #auto sends \n so no need to add
+	ssh_conn.expect('#')
+	
+	ssh_conn.sendline('term len 0')
+	ssh_conn.expect('#')
+	ssh_conn.sendline('show version')
+	ssh_conn.expect('pynet_rtr2#') #you might want to put the whole hostname/shell prompt here instead of just looking for # because you might match on something else
+	print ssh_conn.before #will show you everything from show ip int brief up to the #
+
+
+	try:
+		ssh_conn.sendline('show ver')
+		ssh_conn.expect('zzz')
+	except pexpect.TIMEOUT:
+		print "Found timeout"
+
+	#the above will never match (the zzz part), so it times out instead
+
+	all of the patterns can be treated as / searched as regex
+
+	pattern = re.compile(r'^Lic.*DI:.*$', re.MULTILINE')
+	ssh_conn.sendline('show version')
+	ssh_conn.expect(pattern)
+	print ssh_conn.after #the above will search for the regex pattern we applied, and then print the match
+
+	if you want expect to be specific, use expect_exact, otherwise defaults to regular expression
+
+	#re.MULTILINE #says beginning and end of line marker can match on any line 
+
+
+	prompt = router_name + ssh_conn.after
+	prompt = prompt.strip()
+
+
+if __name__ == "__main__":
+	main()
+
+----
+---vid5
+
+#netmiko -- python ssh library KByers created aimed towards networking devices in particular..
+
+from netmiko import ConnectHandler
+from getpass import getpass
+password = getpass()
+
+pynet1 = {
+	'device_type': 'cisco_ios',
+	'ip': '50.76.53.27',
+	'username': 'pyclass',
+	'password': password,
+}
+
+pynet2 = {
+	'device_type': 'cisco_ios',
+	'ip': '50.76.53.27',
+	'username': 'pyclass',
+	'password': password,
+	'port': 8022,
+}
+
+juniper_srx = {
+	'device_type': 'juniper',
+	'ip': '50.76.53.27',
+	'username': 'pyclass',
+	'password': password,
+	'secret': '',
+	'port': 9822,
+}
+
+pynet_rtr1 = ConnectHandler(**pynet1) #passes this dictionary and key values as arguments into the connect handler
+
+pynet_rtr2 = ConnectHandler(**pynet2) #same thing
+
+pynet_srx = ConnectHandler(**juniper_srx)
+
+ ''
+ Netmiko supports a method (send_config_from_file) that allows you to execconfiguration commands directly from a file. For example, if you had a secommands in a file called 'config_file.txt', then you could execute thosemavia the SSH channel as foll            net_connect.send_config_from_file(config_file='config_file.txt')
+'''
+
+>>> dir(pynet_rtr1)
+['__class__', '__delattr__', '__dict__', '__doc__', '__format__', '__getattribute__', '__hash__', '__init__', '__module__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_autodetect_fs', '_connect_params_dict', '_use_ssh_config', 'alt_host_keys', 'alt_key_file', 'ansi_escape_codes', 'base_prompt', 'check_config_mode', 'check_enable_mode', 'cleanup', 'clear_buffer', 'commit', 'config_mode', 'device_type', 'disable_paging', 'disconnect', 'enable', 'establish_connection', 'exit_config_mode', 'exit_enable_mode', 'find_prompt', 'global_delay_factor', 'host', 'ip', 'key_policy', 'normalize_cmd', 'normalize_linefeeds', 'password', 'port', 'read_until_pattern', 'read_until_prompt', 'read_until_prompt_or_pattern', 'receive_data_generator', 'remote_conn', 'remote_conn_pre', 'secret', 'select_delay_factor', 'send_command', 'send_command_expect', 'send_config_from_file', 'send_config_set', 'session_preparation', 'set_base_prompt', 'special_login_handler', 'ssh_config_file', 'strip_ansi_escape_codes', 'strip_backspaces', 'strip_command', 'strip_prompt', 'system_host_keys', 'username', 'wait_for_recv_ready', 'wait_for_recv_ready_newline']
+
+>>> pynet_rtr1
+<netmiko.cisco.cisco_ios_ssh.CiscoIosSSH object at 0x7fdc5846cc90>
+#note it's a netmiko cisco ios ssh object
+
+note enable, exit_enable_mode, disable_paging, commit, etc
+
+>>> pynet_rtr1.find_prompt()
+u'pynet_rtr1#'
+>>> pynet_rtr2.find_prompt()
+u'pynet_rtr2#'
+>>> pynet_srx.find_prompt()
+u'pyclass@pynet-jnpr-srx1>'
+
+
+>>> pynet_rtr1.config_mode()
+u'config term\r\nEnter configuration commands, one per line.  End with CNTL/Z.\r\npynet_rtr1(config)#'
+>>> pynet_rtr1.check_config_mode()
+True
+>>> pynet_rtr1.find_prompt()
+u'pynet_rtr1(config)#'
+
+
+outp = pynet_rtr1.exit_config_mode()
+
+outp = pynet_rtr1.send_command("show ip int br") #will take care of the back and forth you'd need for paramiko, and assigns show ip int br output to outp
+
+#>>> print outp
+Interface                  IP-Address      OK? Method Status                Protocol
+FastEthernet0              unassigned      YES unset  down                  down    
+FastEthernet1              unassigned      YES unset  down                  down    
+FastEthernet2              unassigned      YES unset  down                  down    
+FastEthernet3              unassigned      YES unset  down                  down    
+FastEthernet4              10.220.88.20    YES NVRAM  up                    up      
+Vlan1                      unassigned      YES unset  down                  down    
+#auto strips echo and trailing prompt (only what you'd expect to see)
+
+#auto disables paging
+>>> outp = pynet_rtr1.send_command("show ver")
+>>> print outp
+
+>>> print outp
+Cisco IOS Software, C880 Software (C880DATA-UNIVERSALK9-M), Version 15.4(2)T1, RELEASE SOFTWARE (fc3)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2014 by Cisco Systems, Inc.
+Compiled Thu 26-Jun-14 14:15 by prod_rel_team
+
+ROM: System Bootstrap, Version 12.4(22r)YB5, RELEASE SOFTWARE (fc1)
+
+pynet-rtr1 uptime is 12 weeks, 4 days, 3 hours, 55 minutes
+System returned to ROM by power-on
+System restarted at 11:26:36 PST Thu Feb 4 2016
+System image file is "flash:c880data-universalk9-mz.154-2.T1.bin"
+Last reload type: Normal Reload
+Last reload reason: power-on
+
+
+
+This product contains cryptographic features and is subject to United
+States and local country laws governing import, export, transfer and
+use. Delivery of Cisco cryptographic products does not imply
+third-party authority to import, export, distribute or use encryption.
+Importers, exporters, distributors and users are responsible for
+compliance with U.S. and local country laws. By using this product you
+agree to comply with applicable laws and regulations. If you are unable
+to comply with U.S. and local laws, return this product immediately.
+
+A summary of U.S. laws governing Cisco cryptographic products may be found at:
+http://www.cisco.com/wwl/export/crypto/tool/stqrg.html
+
+If you require further assistance please contact us by sending email to
+export@cisco.com.
+
+Cisco 881 (MPC8300) processor (revision 1.0) with 236544K/25600K bytes of memory.
+Processor board ID FTX1512038X
+
+5 FastEthernet interfaces
+1 Virtual Private Network (VPN) Module
+256K bytes of non-volatile configuration memory.
+126000K bytes of ATA CompactFlash (Read/Write)
+
+
+License Info:
+
+License UDI:
+
+-------------------------------------------------
+Device#	  PID			SN
+-------------------------------------------------
+*0  	  CISCO881-SEC-K9       FTX1512038X     
+
+
+
+License Information for 'c880-data'
+    License Level: advipservices   Type: Permanent
+    Next reboot license Level: advipservices
+
+
+Configuration register is 0x2102
+
+
+
+>>> outp = pynet_rtr1.send_command("show run | inc logging")
+>>> print outp
+logging buffered 9999
+no logging console
+logging host 1.1.1.1
+
+
+config_commands = ['logging buffered 19999']
+output = pynet_rtr1.send_config_set(config_commands)
+...can create a list for config_commands and send the list down the pipe
+
+
+>>> config_commands = ['logging buffered 19999']
+>>> output = pynet_rtr1.send_config_set(config_commands)
+>>> print output
+config term
+Enter configuration commands, one per line.  End with CNTL/Z.
+pynet-rtr1(config)#logging buffered 19999
+pynet-rtr1(config)#end
+pynet-rtr1#
+>>> outp = pynet_rtr1.send_command("show run | inc logging")
+>>>print outp
+logging buffered 19999
+no logging console
+logging host 1.1.1.1
+>>>
+
+#does not auto save config
+
+SRX...
+
+>>> outp = pynet_srx.send_command("show arp")
+print outp
+>>> print outp
+
+MAC Address       Address         Name                      Interface           Flags
+00:1f:9e:92:16:fb 10.220.88.1     10.220.88.1               vlan.0              none
+
+>>> pynet_srx.config_mode()
+u'configure \r\nEntering configuration mode\r\nUsers currently editing the configuration:\r\n  pyclass terminal u0 (pid 52077) on since 2016-04-27 20:59:31 EDT, idle 5d 06:18\r\n      [edit]\r\n\r\n[edit]\r\npyclass@pynet-jnpr-srx1# '
+>>> pynet_srx.check_config_mode()
+True
+>>> pynet_srx.find_prompt()
+u'pyclass@pynet-jnpr-srx1#'
+
+
+>>> srx_config_commands = ['set  system host-name test123']
+>>> outp = pynet_srx.send_config_set(srx_config_commands)
+
+print >>> 
+>>> print outp
+set system host-name test123 
+
+[edit]
+pyclass@pynet-jnpr-srx1# exit configuration-mode 
+The configuration has been changed but not committed
+Exiting configuration mode
+
+pyclass@pynet-jnpr-srx1> 
+>>> pynet_srx.commit()
+::::WAIT:::::
+>>> pynet_srx.find_prompt()
+u'pyclass@test123#'
+>>> 
+

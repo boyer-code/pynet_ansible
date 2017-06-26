@@ -1,0 +1,74 @@
+Lecture Notes
+Working with files
+Before Python can access file information it must "open" the file. open() is the built-in function which tells Python to open the file. open() takes two parameters 'filename' and 'mode'. If you leave the second parameter off 'open(filename)' Python will simply open the file in read mode ('r'). Opening a file does not cause Python to read all the data in the file, but it makes the information in the file available to Python to use - it creates a connection between Python and the file on the hard drive, referred to as a "Handle".
+If the file cannot be found you will receive a traceback error.
+The newline character
+'\n' represents a newline. Newline is one character, even though it is represented by two.
+Code patterns
+Counting lines in a file
+fhand = open("words.txt")
+count = 0
+for line in fhand:
+    count = count + 1
+print "line count", count
+Reading the whole file
+fhand =  open("words.txt")
+inp = fhand.read() # reads the whole file into memory
+print len(inp)# returns the number of characters in a file
+print inp # prints the whole file
+Searching through a file
+fhand= open("mbox-short.txt")
+for line in fhand:
+    # line = line.rstrip()
+    if line.startswith("From:"):
+        line = line.rstrip() # better here
+        print line
+note that methods something.strip() or something.rstrip() should be used to get rid of the extra \n (new line character).
+Chapter 7 Exercises
+The above page is intended as a place for students to work out solutions and answers to the exercises from the textbook. Please do not post answers to exercises that are actual graded assignments.
+The exercises with file introduce the idea of opening a text file and choosing a handle to it.
+In both tasks we need only to read. Therefore most of the exercises will start with a open/ handle idiom:
+Opening
+inp = raw_input("Enter file name")# asks for a file name
+fhand= open("mbox-short.txt") # handling the file
+A more elegant idiom includes a guardian
+inp = raw_input("Enter file name")# asks for a file name
+try:
+    fhand= open("mbox-short.txt") # handling the file
+except:
+    print "Invalid filename"
+    exit()
+The try/except means to Py "try to open the file. In case the file cannot be opened, print invalid filename and kill the program".
+Working the data
+Most of the exercises will ask to: -Count or print the lines -A find line with specific data: (e-mail, server name, hours, dates, etc.)
+To run this tasks we usually use a for loop
+fhand = open("words.txt")
+#before the loop you may need to set counters
+for line in fhand:
+#after the loop you will give instructions on what needs to be done to each line
+Some examples of the full loops are described above in the section "code patterns"
+Printing the results
+When the loop is finished you should print you results (e.g. the whole file, the total number of lines, all the lines containing e-mail addresses.
+More Resource Topics
+Add resources for this chapter to this page..
+File names and paths:
+The filename can also be an absolute or relative path.
+For Windows:
+On Windows machines, all backslashes must be doubled.
+For Unix / Unix-like (Linux, [Mac] OS X, etc)
+On Unix / Unix-like machines, forward slashes don't need any special treatment. However, you may notice the ~ shortcut doesn't work.
+A solution:
+fname = raw_input("Enter a file name: ")
+    if fname[0:2] == "~/": #Check to see if it starts with a ~ and a slash
+        #If it doesn't start with the ~/, then 
+        #the user could be referring to a valid file
+        #like "~.py" (I checked: it is possible.)
+        #notice below replace is valid on Mac OSX only (and not a good approach overall, cause not portable at all)
+        fname = fname.replace('~',"/Users/"+raw_input("Enter your short user name: "),1)
+workingfname = fname.replace("\\",'') #This for proper escaping of a valid folder named '~' as '\~', you can also use './~' as Python automatically escapes for you.
+#go back to normal program now
+handle = open(workingfname,'r') # . . .
+for line in handle:
+    print line
+print "\n"+("That was "+fname+".").center(40)
+Naturally, no need to ask the user for their short name if there's only one user, just replace the italicized code with the path to your home folder. You could even confuse things by redefining the ~ as a shortcut to the folder that has all your python code! (or select another letter to use as a wildcard.)

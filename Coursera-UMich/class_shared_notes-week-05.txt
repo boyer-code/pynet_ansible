@@ -1,0 +1,38 @@
+Lecture Notes
+"is" and "is not" Operators
+"is" can be used in logical expressions.
+It implies 'is exactly the same instance, type and value'.
+Whereas '==' compares two items and will declare the comparison as 'True' if the items are the same type and have the same physical value, the 'is' operator only agrees they are the same if they are actually the same physical instance of the value.
+[You don't need to understand this in any more detail if you are happy with the statement above! The reason there is a difference between 'is' and '==' starts to become clearer if you understand that the Python language caches small values such as '1', '2', "a", "b", etc, consequently when you say 'x = 1' x is pointed at the cached value of '1', 'y = 1' will point at the same physical cached value of '1' rather than at another instance of '1' somewhere else in memory. So 'x is y' is actually True because they both point at the same physical cached value of '1'. In the example below where x and y are set to 10000, 'x is y' is False because Python doesn't cache the larger values, so x points at one instance of 10000, whereas y points at a difference instance of 10000, so x is not actually the same instance as y. Because this behavior is implementation dependent, 'is' should only be used with predefined constant values such as 'True', 'False' and 'None'. If Python was re-implemented for an environment with very little memory, it is possible it would cache more constants, so 10000 could be cached and then your program which checked 'x is y' could return 'True' instead of 'False' making an unexpected change in the logic, fine if that was intended, but disastrous if not!]
+'==' should be used more frequently than 'is' and 'is not' as these operators are intended for specific situations. 'is' and 'is not' are best used when testing for specific values like "None" or "True/False". '==' is best used for testing numeric values. (i.e. 'if i == 4')
+Avoid using "is" or "is not" to check for equality between integer or floating point numbers since results are unpredictable. For example:
+>>>> x = 1
+>>>> y = 1
+>>>> x is y
+True
+
+>>>> x = 10000
+>>>> y = 10000
+>>>> x is y
+False
+break
+Using small letter "b"reak instead of capital letter "B"reak to key in break function before you run a program.
+Validating the input data
+Validating the input data means checking that what was input is the kind of data you want. 
+The below code is one way to do that.
+
+try:
+    num = int(num)
+except:
+    print "Invalid input"
+    continue
+Or if you wish to do this without potentially affecting the value of num, this code works as well.
+    try:
+        float(num)
+    except:
+        print "Invalid input"
+        continue
+Stuck in a loop and Ctrl C won't work
+Normally 'Ctrl C' will terminate a python program but I got stuck trying to exit my draft program that wasn't doing what I wanted. Instead of exiting as normal it very nicely handled the input as a String and simply returned "Invalid Input:" then followed 'continue' by simply requesting a new number. Initially I had to kill the terminal session and start afresh until I eventually found that Ctrl Z did the job when Ctrl C did not! 
+Chapter 5 Exercises
+The above page is intended as a place for students to work out solutions and answers to the exercises from the textbook. Please do not post answers to exercises that are actual graded assignments.

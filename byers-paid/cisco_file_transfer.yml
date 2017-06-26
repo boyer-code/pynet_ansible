@@ -1,0 +1,20 @@
+---
+
+- name: Cisco IOS testing
+  hosts: pynet-rtr1
+  gather_facts: False
+
+  tasks:
+  - name: Testing file transfer
+    cisco_file_transfer:
+       source_file="/home/jboyer/ANSIBLE/user123-test.txt"
+       dest_file=user123-test.txt
+       overwrite=true
+       enable_scp=true
+       host={{ host }}
+       port={{ port }}
+       username={{ username}}
+       password={{ password }}
+
+#5. Use the cisco_file_transfer.py module to transfer a small file to the Cisco pynet-rtr1 router.
+#we'll call it user123-test.txt

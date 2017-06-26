@@ -1,0 +1,8 @@
+---
+- name: Generate configuration file
+  hosts: localhost
+
+  roles:
+    - access_switch
+
+

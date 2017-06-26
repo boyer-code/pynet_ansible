@@ -1,0 +1,48 @@
+
+I explained to you how to create a Git repository in GitHub and how to clone a Git repository from GitHub. I did not explain to you, however, how to create a new Git repository directly on a Linux system. You can do this as follows:
+
+ 
+
+# Set your Git name and Git email address. These are included in commits.
+
+# You only have to do this once per system
+
+git config --global user.name "Kirk Byers"
+git config --global user.email "ktbyers@twb-tech.com"
+
+ 
+
+# Make your repository directory
+
+mkdir pynet_testz
+
+cd pynet_testz
+
+ 
+
+# Initialize the repository
+
+git init
+
+ 
+
+# Add a file
+
+touch README.md
+
+git add README.md
+
+git commit -m 'Initial commit'
+
+ 
+
+# Add a git remote (pointing to GitHub)
+
+# Only necessary if you are going to push changes up to GitHub
+
+# You will still need to create the remote 'pynet_test' repository in GitHub
+git remote add origin https://github.com/ktbyers/pynet_test.git
+
+ 
+
+In my examples, I was generally showing a single 'git add' and then a corresponding commit. You can also add or modify a set of files to a single commit. This is a very common pattern (i.e. make a set of changes, 'git add' the files, make a commit).
