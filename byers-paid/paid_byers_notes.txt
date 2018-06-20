@@ -1,6 +1,4 @@
 hostname = pylab7b.twb-tech.com (alias python_lab on my linux box)
-username = jboyer
-password = .,Rou73r.,
 alias python_lab='ssh -l jboyer pylab7b.twb-tech.com'
 
 
